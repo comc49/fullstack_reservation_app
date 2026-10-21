@@ -1,0 +1,3 @@
+# Real church data: never commit
+data/
+.DS_Store

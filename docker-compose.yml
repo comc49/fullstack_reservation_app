@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: brian
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: churchops
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./data:/data:ro
+
+volumes:
+  pgdata:
