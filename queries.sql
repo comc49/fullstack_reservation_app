@@ -68,6 +68,66 @@ JOIN booking_ministries AS bm ON bm.booking_id = b.id
 WHERE bm.ministry_id IN (SELECT id FROM college_tree)
 ORDER BY b.id;
 
+-- Q6: Bookings with no ministry.
+-- Anti-join: LEFT JOIN keeps every booking, and a booking with no match
+-- gets NULL on the right side. Use IS NULL; "= NULL" never matches.
+SELECT b.id, b.title
+FROM bookings AS b
+LEFT JOIN booking_ministries AS bm ON bm.booking_id = b.id
+WHERE bm.ministry_id IS NULL;
+
+-- Q7: Busiest day of the week, counting events (not room uses).
+-- Convert to Irvine time BEFORE extracting the day, or evening bookings
+-- land on the next day in UTC. dow: 0 = Sunday ... 6 = Saturday.
+-- Run order: FROM -> GROUP BY -> SELECT -> ORDER BY.
+SELECT
+  extract(dow FROM lower(br.during) AT TIME ZONE 'America/Los_Angeles') AS day_of_week,
+  count(DISTINCT br.booking_id) AS bookings
+FROM booking_rooms AS br
+GROUP BY day_of_week
+ORDER BY bookings DESC;
+
+-- Q8: Ministries with more than 5 bookings.
+-- HAVING filters groups after GROUP BY; WHERE filters rows before it.
+-- HAVING runs before SELECT, so repeat the aggregate instead of using "bookings".
+-- No DISTINCT: the primary key means each booking/ministry pair appears once.
+SELECT
+  m.name AS ministry,
+  count(bm.booking_id) AS bookings
+FROM booking_ministries AS bm
+JOIN ministries AS m ON m.id = bm.ministry_id
+GROUP BY m.name
+HAVING count(bm.booking_id) > 5
+ORDER BY bookings DESC;
+
+-- Q9: The longest single booking.
+-- upper - lower gives an interval. ORDER BY + LIMIT keeps the whole row;
+-- max() alone can't tell you which booking it came from.
+-- Always JOIN ... ON: a comma with no condition pairs every row with every row.
+SELECT
+  br.booking_id,
+  b.title,
+  upper(br.during) - lower(br.during) AS length
+FROM booking_rooms AS br
+JOIN bookings AS b ON b.id = br.booking_id
+ORDER BY length DESC
+LIMIT 1;
+
+-- Q10: The next upcoming booking for each room.
+-- ORDER BY groups each room's rows together, earliest first;
+-- DISTINCT ON then keeps the first row per room.
+-- Rooms with no upcoming bookings don't appear (WHERE removes all their rows).
+SELECT DISTINCT ON (r.name)
+  r.name AS room,
+  b.title,
+  lower(br.during) AT TIME ZONE 'America/Los_Angeles' AS starts_local
+FROM booking_rooms AS br
+JOIN bookings AS b ON b.id = br.booking_id
+JOIN rooms    AS r ON r.id = br.room_id
+WHERE lower(br.during) > now()
+  AND b.cancelled_at IS NULL
+ORDER BY r.name, lower(br.during);
+
 -- Constraint test, inside a transaction that is rolled back, so nothing is kept.
 -- The first insert should fail with "conflicting key value violates exclusion constraint".
 BEGIN;
