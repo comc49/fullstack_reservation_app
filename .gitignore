@@ -2,3 +2,12 @@
 data/
 .DS_Store
 java-practice/
+
+# Build output: Gradle recreates these
+backend/build/
+backend/.gradle/
+
+# Editor settings
+.idea/
+.vscode/
+*.iml

@@ -25,11 +25,43 @@ With time first, the room's entries are scattered through the whole timeline.
 
 ### 2. When Postgres skips an index (selectivity)
 
-| Rows matched | Example | Plan chosen |
-| --- | --- | --- |
-| 20 rows | Feed query above | Index Scan |
-| About 40% | `room_id IN (1, 2)` | Bitmap scan |
-| About 80% | `room_id IN (1, 2, 3, 4)` | Seq Scan |
+Around 20 of rows
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, occurred_at, action
+FROM activity_log
+WHERE room_id = 3
+ORDER BY occurred_at DESC, id DESC
+LIMIT 20;
+
+->  Index Scan using activity_log_room_time_idx on activity_log  (cost=0.42..48620.26 rows=202415 width=31) (actual time=0.203..0.285 rows=20 loops=1)
+ Planning Time: 1.818 ms
+ Execution Time: 3.352 ms
+
+
+About 40% of rows
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, occurred_at, action
+FROM activity_log
+WHERE room_id IN (1, 2);
+
+Bitmap Heap Scan on activity_log  (cost=4233.72..19731.66 rows=399595 width=31) (actual time=31.977..114.445 rows=399735 loops=1)
+ Planning Time: 1.178 ms
+ Execution Time: 154.941 ms
+
+About 80% of rows: four of five rooms
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, occurred_at, action
+FROM activity_log
+WHERE room_id IN (1, 2, 3, 4);
+
+Seq Scan on activity_log  (cost=0.00..25504.08 rows=799824 width=31) (actual time=0.063..135.681 rows=800351 loops=1)
+ Planning Time: 0.657 ms
+ Execution Time: 182.529 ms
+
+
 
 Why: when most rows match, nearly every page has to be read anyway.
 Reading the whole table in order is then cheaper than jumping between index and table.
@@ -39,10 +71,24 @@ The planner compares estimated costs (`random_page_cost` = 4, `seq_page_cost` = 
 
 Run: `docker compose exec -T db psql -U brian -d churchops < scripts/benchmark_inserts.sql`
 
-| Indexes | 100,000 inserts |
-| --- | --- |
-| 0 | ____ ms |
-| 4 | ____ ms |
+INSERT INTO bench_log (id, occurred_at, action, room_id, details)
+SELECT n, now() - random() * interval '3 years', 'booking_created', 1 + floor(random() * 5)::int, 'generated'
+FROM generate_series(1, 100000) AS n;
+
+Time: 179.838 ms
+
+
+CREATE INDEX ON bench_log (id);
+CREATE INDEX ON bench_log (room_id, occurred_at DESC);
+CREATE INDEX ON bench_log (action);
+CREATE INDEX ON bench_log (occurred_at);
+
+-- Run 2: 4 indexes
+INSERT INTO bench_log (id, occurred_at, action, room_id, details)
+SELECT n, now() - random() * interval '3 years', 'booking_created', 1 + floor(random() * 5)::int, 'generated'
+FROM generate_series(1, 100000) AS n;
+
+Run 2 Time: 687.645 ms
 
 Why: each insert adds one entry to every index, in sorted position, and logs each change.
 Rule: add an index for a measured, frequent query, not "just in case."
