@@ -17,3 +17,13 @@ export interface ActivityPage {
   items: ActivityItem[]
   nextCursor: string | null // null on the last page
 }
+
+// One booked room in a time window. Mirrors the Java record RoomBooking.
+export interface RoomBooking {
+  roomId: number
+  roomName: string
+  bookingId: number
+  title: string
+  startsAt: string   // ISO 8601, UTC
+  endsAt: string
+}

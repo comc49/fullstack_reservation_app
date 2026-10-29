@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
-import type { ActivityPage, Room } from './types'
+import type { ActivityPage, Room, RoomBooking } from './types'
 
 export const apiSlice = createApi({
   reducerPath: 'api',
@@ -9,6 +9,14 @@ export const apiSlice = createApi({
     // GET /v1/rooms
     getRooms: build.query<Room[], void>({
       query: () => 'rooms',
+    }),
+
+    // GET /v1/bookings?from=...&to=...
+    getBookingsInWindow: build.query<RoomBooking[], { from: string; to: string }>({
+      query: ({ from, to }) => ({
+        url: `bookings`,          // blank A
+        params: {from, to},       // blank B
+      }),
     }),
 
     // GET /v1/rooms/{roomId}/activity?cursor=...
@@ -30,4 +38,4 @@ export const apiSlice = createApi({
   }),
 })
 
-export const { useGetRoomsQuery, useGetRoomActivityInfiniteQuery } = apiSlice
+export const { useGetRoomsQuery, useGetBookingsInWindowQuery, useGetRoomActivityInfiniteQuery } = apiSlice
