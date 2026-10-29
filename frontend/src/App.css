@@ -1,0 +1,35 @@
+.app {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  text-align: left;
+}
+
+.room-picker select {
+  font: inherit;
+  padding: 0.25rem 0.5rem;
+}
+
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+}
+
+.activity-item {
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: 0.25rem 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #8884;
+}
+
+.activity-item time {
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-title {
+  grid-column: 2;
+  color: #888;
+}
